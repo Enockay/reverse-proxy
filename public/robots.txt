@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://app.blackie-networks.com/sitemap.xml
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /signup
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Allow public pages
+Allow: /
+Allow: /home
+
+# Crawl delay (optional)
+Crawl-delay: 1
