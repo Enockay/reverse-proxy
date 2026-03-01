@@ -260,7 +260,7 @@ function Home() {
                 public access ports (Winbox, SSH, API), real-time monitoring, and 24/7 support. 
                 Manage all your routers from one intuitive dashboard. Only $1/month per router.
               </p>
-              <div className="flex flex-col sm:flex-row items-start gap-3 mb-8">
+              <div className="flex flex-row items-center gap-3 mb-8">
                 {!user ? (
                   <>
                     <Link 
@@ -272,7 +272,7 @@ function Home() {
                     </Link>
                     <Link 
                       to="/login" 
-                      className="bg-white text-gray-700 px-6 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all"
+                      className="bg-white text-gray-700 px-6 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all flex items-center justify-center"
                     >
                       Sign In
                     </Link>
