@@ -213,6 +213,9 @@ function Routers() {
                     Online
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Uptime
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -307,6 +310,13 @@ function Routers() {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       {getOnlineBadge(router.isOnline || router.status === 'active')}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-600">
+                      {router.routerboardInfo?.uptime ? (
+                        <span className="font-medium">{router.routerboardInfo.uptime}</span>
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="flex items-center space-x-1">

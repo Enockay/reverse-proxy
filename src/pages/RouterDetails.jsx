@@ -377,11 +377,89 @@ function RouterDetails() {
           </div>
 
 
+          {/* Routerboard Information Card */}
+          {router.routerboardInfo && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                  <Activity className="w-5 h-5 text-green-600" />
+                </div>
+                <h2 className="text-sm font-semibold text-gray-900">Routerboard Information</h2>
+              </div>
+              <div className="space-y-3">
+                {router.routerboardInfo.uptime && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Uptime</span>
+                    <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.uptime}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.cpuLoad && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">CPU Load</span>
+                    <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.cpuLoad}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.memoryUsage && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Memory Usage</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {router.routerboardInfo.memoryUsage}
+                      {router.routerboardInfo.totalMemory && ` / ${router.routerboardInfo.totalMemory}`}
+                    </span>
+                  </div>
+                )}
+                {router.routerboardInfo.freeMemory && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Free Memory</span>
+                    <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.freeMemory}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.boardName && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Board Name</span>
+                    <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.boardName}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.model && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Model</span>
+                    <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.model}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.serialNumber && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Serial Number</span>
+                    <span className="text-sm font-medium text-gray-900 font-mono">{router.routerboardInfo.serialNumber}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.firmware && (
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm text-gray-600">Firmware</span>
+                    <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.firmware}</span>
+                  </div>
+                )}
+                {router.routerboardInfo.lastChecked && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      Last checked: {new Date(router.routerboardInfo.lastChecked).toLocaleString('en-GB', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Router Actions Card */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center mb-4">
-              <div className="p-2 bg-green-100 rounded-lg mr-3">
-                <Activity className="w-5 h-5 text-green-600" />
+              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                <Settings className="w-5 h-5 text-blue-600" />
               </div>
               <h2 className="text-sm font-semibold text-gray-900">Router Actions</h2>
             </div>
