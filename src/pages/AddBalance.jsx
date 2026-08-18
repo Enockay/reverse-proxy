@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { ArrowLeft, Wallet, CreditCard, Loader } from 'lucide-react'
@@ -28,14 +28,12 @@ function AddBalance() {
         paymentMethod
       })
 
-      if (response.data.success) {
+      if (response.data.success && response.data.transaction?.paymentLink) {
         setProcessing(true)
-        // In production, redirect to payment gateway
-        // For now, simulate payment processing
-        setTimeout(() => {
-          alert(`Payment initiated. In production, you would be redirected to ${paymentMethod === 'paystack' ? 'PayStack' : 'PayPal'}`)
-          navigate('/billing')
-        }, 2000)
+        window.location.href = response.data.transaction.paymentLink
+      } else {
+        setError('Payment could not be started')
+        setLoading(false)
       }
     } catch (error) {
       console.error('Failed to add balance:', error)

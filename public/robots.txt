@@ -4,18 +4,27 @@ Allow: /
 # Sitemap
 Sitemap: https://app.blackie-networks.com/sitemap.xml
 
-# Disallow admin and API routes
+# Disallow authenticated app and admin routes - none of these carry public
+# marketing content, and the admin console must never appear in search results
 Disallow: /api/
-Disallow: /dashboard/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /devices
+Disallow: /routers
+Disallow: /billing
+Disallow: /profile
+Disallow: /referrals
+Disallow: /support
+Disallow: /documents
+Disallow: /pricing
 Disallow: /login
 Disallow: /signup
 Disallow: /verify-email
 Disallow: /forgot-password
 Disallow: /reset-password
 
-# Allow public pages
+# The only public marketing page
 Allow: /
-Allow: /home
 
 # Crawl delay (optional)
 Crawl-delay: 1

@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react'
 
 function Routers() {
@@ -26,6 +27,7 @@ function Routers() {
   const [currentPage, setCurrentPage] = useState(1)
   const [entriesPerPage, setEntriesPerPage] = useState(10)
   const [copiedItem, setCopiedItem] = useState(null)
+  const [renewingId, setRenewingId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -67,6 +69,26 @@ function Routers() {
     }
   }
 
+  const handleRenew = async (router) => {
+    setRenewingId(router.id)
+    try {
+      const response = await api.post(`/api/routers/${router.id}/renew`)
+      alert(`Router renewed! $${response.data.amount} charged, reconnecting now.`)
+      fetchRouters()
+    } catch (error) {
+      const message = error.response?.data?.error || 'Failed to renew router'
+      const required = error.response?.data?.required
+      const available = error.response?.data?.available
+      alert(
+        required !== undefined
+          ? `${message}. Required: $${required}, available: $${available}. Top up your balance first.`
+          : message
+      )
+    } finally {
+      setRenewingId(null)
+    }
+  }
+
   const handleDownloadBackup = async (router) => {
     try {
       // Fetch router details to get client name
@@ -98,6 +120,12 @@ function Routers() {
   const getStatusBadge = (status) => {
     if (status === 'active') {
       return <span className="text-xs font-medium text-green-600">Active</span>
+    }
+    if (status === 'past_due' || status === 'expired') {
+      return <span className="text-xs font-medium text-red-600">{status.replace('_', ' ')}</span>
+    }
+    if (status === 'trial') {
+      return <span className="text-xs font-medium text-amber-600">Trial</span>
     }
     return <span className="text-xs font-medium text-gray-500">{status}</span>
   }
@@ -320,6 +348,17 @@ function Routers() {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="flex items-center space-x-1">
+                        {(router.subscriptionStatus === 'past_due' || router.subscriptionStatus === 'expired') && (
+                          <button
+                            onClick={() => handleRenew(router)}
+                            disabled={renewingId === router.id}
+                            className="px-2 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                            title="Renew router"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${renewingId === router.id ? 'animate-spin' : ''}`} />
+                            Renew
+                          </button>
+                        )}
                         <Link
                           to={`/routers/${router.id}`}
                           className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"

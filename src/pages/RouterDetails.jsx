@@ -16,7 +16,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Loader
+  Loader,
+  RefreshCw
 } from 'lucide-react'
 
 function RouterDetails() {
@@ -28,6 +29,7 @@ function RouterDetails() {
   const [copiedItem, setCopiedItem] = useState(null)
   const [pinging, setPinging] = useState(false)
   const [pingResult, setPingResult] = useState(null)
+  const [renewing, setRenewing] = useState(false)
 
   useEffect(() => {
     fetchRouterDetails()
@@ -98,6 +100,27 @@ function RouterDetails() {
     }
   }
 
+  const handleRenew = async () => {
+    setRenewing(true)
+    setError('')
+    try {
+      const response = await api.post(`/api/routers/${id}/renew`)
+      alert(`Router renewed! $${response.data.amount} charged, reconnecting now.`)
+      fetchRouterDetails()
+    } catch (err) {
+      const required = err.response?.data?.required
+      const available = err.response?.data?.available
+      const message = err.response?.data?.error || 'Failed to renew router'
+      setError(
+        required !== undefined
+          ? `${message}. Required: $${required}, available: $${available}. Top up your balance first.`
+          : message
+      )
+    } finally {
+      setRenewing(false)
+    }
+  }
+
   const handleDownloadConfig = async () => {
     if (!router?.wireguardConfig?.clientName) return
 
@@ -164,7 +187,7 @@ function RouterDetails() {
   if (!router) return null
 
   const winboxUrl = router.ports?.winbox 
-    ? `winbox://${router.address || 'app.blackie-networks.com'}:${router.ports.winbox}`
+    ? `winbox://${router.address || 'vpn.blackie-networks.com'}:${router.ports.winbox}`
     : null
 
   return (
@@ -194,6 +217,27 @@ function RouterDetails() {
           </button>
         </div>
       </div>
+
+      {/* Past-due renewal banner */}
+      {(router.subscriptionStatus === 'past_due' || router.subscriptionStatus === 'expired') && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center text-red-700 text-sm">
+            <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+            <span>
+              This router&apos;s {router.subscriptionStatus === 'past_due' ? 'trial has ended and payment failed' : 'subscription has expired'} - it has been disconnected from the VPN hub.
+              Renew now to reconnect it{router.pricePerMonth ? ` for $${router.pricePerMonth}/month` : ''}.
+            </span>
+          </div>
+          <button
+            onClick={handleRenew}
+            disabled={renewing}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 flex-shrink-0"
+          >
+            <RefreshCw className={`w-4 h-4 ${renewing ? 'animate-spin' : ''}`} />
+            {renewing ? 'Renewing...' : `Renew for $${router.pricePerMonth ?? ''}`}
+          </button>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -304,12 +348,12 @@ function RouterDetails() {
                   <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">Winbox</div>
                     <div className="text-sm font-mono text-gray-900">
-                      {router.address || 'app.blackie-networks.com'}:{router.ports.winbox}
+                      {router.address || 'vpn.blackie-networks.com'}:{router.ports.winbox}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => copyToClipboard(`${router.address || 'app.blackie-networks.com'}:${router.ports.winbox}`, 'winbox')}
+                      onClick={() => copyToClipboard(`${router.address || 'vpn.blackie-networks.com'}:${router.ports.winbox}`, 'winbox')}
                       className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                       title="Copy Winbox address"
                     >
@@ -336,11 +380,11 @@ function RouterDetails() {
                   <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">SSH</div>
                     <div className="text-sm font-mono text-gray-900">
-                      {router.address || 'app.blackie-networks.com'}:{router.ports.ssh}
+                      {router.address || 'vpn.blackie-networks.com'}:{router.ports.ssh}
                     </div>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(`${router.address || 'app.blackie-networks.com'}:${router.ports.ssh}`, 'ssh')}
+                    onClick={() => copyToClipboard(`${router.address || 'vpn.blackie-networks.com'}:${router.ports.ssh}`, 'ssh')}
                     className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                     title="Copy SSH address"
                   >
@@ -357,7 +401,7 @@ function RouterDetails() {
                   <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">API</div>
                     <div className="text-sm font-mono text-gray-900">
-                      {router.address || 'app.blackie-networks.com'}:{router.ports.api}
+                      {router.address || 'vpn.blackie-networks.com'}:{router.ports.api}
                     </div>
                   </div>
                   <button

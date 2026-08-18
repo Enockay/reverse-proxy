@@ -1,10 +1,12 @@
-import { FileText, Download, ExternalLink } from 'lucide-react'
+import { FileText, Download } from 'lucide-react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 function Documents() {
   const documents = [
-    { name: 'Getting Started Guide', type: 'PDF', size: '2.5 MB' },
-    { name: 'MikroTik Configuration Guide', type: 'PDF', size: '1.8 MB' },
-    { name: 'API Documentation', type: 'PDF', size: '3.2 MB' },
+    { name: 'Getting Started Guide', type: 'PDF', size: '8.7 KB', file: 'getting-started-guide.pdf' },
+    { name: 'MikroTik Configuration Guide', type: 'PDF', size: '8.9 KB', file: 'mikrotik-configuration-guide.pdf' },
+    { name: 'API Documentation', type: 'PDF', size: '11.9 KB', file: 'api-documentation.pdf' },
   ]
 
   return (
@@ -27,10 +29,16 @@ function Documents() {
                   <p className="text-xs text-gray-500">{doc.type} • {doc.size}</p>
                 </div>
               </div>
-              <button className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 flex items-center">
+              <a
+                href={`${API_URL}/docs/${doc.file}`}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 flex items-center"
+              >
                 <Download className="w-3 h-3 mr-1" />
                 Download
-              </button>
+              </a>
             </div>
           ))}
         </div>

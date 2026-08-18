@@ -20,7 +20,9 @@ import {
   MessageCircle,
   Maximize2,
   Bell,
-  ChevronDown as ChevronDownIcon
+  ChevronDown as ChevronDownIcon,
+  Shield,
+  Laptop
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -32,7 +34,9 @@ function Layout() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
 
   const navigation = [
+    ...(user?.role === 'admin' ? [{ name: 'Admin', href: '/admin', icon: Shield }] : []),
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'My Devices', href: '/devices', icon: Laptop },
     {
       name: 'Router Management',
       href: '/routers',
