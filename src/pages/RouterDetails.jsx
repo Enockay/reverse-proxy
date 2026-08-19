@@ -32,6 +32,17 @@ const FALLBACK_HOST = (() => {
   }
 })()
 
+// routerboardInfo.rxBytes/txBytes are cumulative byte counts as strings
+// (RouterOS counters can exceed safe integer precision over a long uptime).
+function formatBytes(value) {
+  const bytes = Number(value)
+  if (!value || !Number.isFinite(bytes)) return 'N/A'
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+  return `${(bytes / 1024 ** exponent).toFixed(exponent === 0 ? 0 : 2)} ${units[exponent]}`
+}
+
 function RouterDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -489,9 +500,17 @@ function RouterDetails() {
                   </div>
                 )}
                 {router.routerboardInfo.firmware && (
-                  <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="text-sm text-gray-600">Firmware</span>
                     <span className="text-sm font-medium text-gray-900">{router.routerboardInfo.firmware}</span>
+                  </div>
+                )}
+                {(router.routerboardInfo.rxBytes || router.routerboardInfo.txBytes) && (
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm text-gray-600">Tunnel Traffic (rx / tx)</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatBytes(router.routerboardInfo.rxBytes)} / {formatBytes(router.routerboardInfo.txBytes)}
+                    </span>
                   </div>
                 )}
                 {router.routerboardInfo.lastChecked && (
