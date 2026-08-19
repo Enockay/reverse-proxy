@@ -18,6 +18,8 @@ const EMPTY_FORM = {
   routerMonthlyPrice: '',
   trialDays: '',
   serverEndpoint: '',
+  proxyPortRangeStart: '',
+  proxyPortRangeEnd: '',
   emailSenderName: '',
   emailSenderEmail: '',
   emailReplyToEmail: '',
@@ -93,6 +95,8 @@ function AdminSettings() {
         routerMonthlyPrice: s.routerMonthlyPrice,
         trialDays: s.trialDays,
         serverEndpoint: s.serverEndpoint,
+        proxyPortRangeStart: s.proxyPortRangeStart,
+        proxyPortRangeEnd: s.proxyPortRangeEnd,
         emailSenderName: s.emailSenderName,
         emailSenderEmail: s.emailSenderEmail,
         emailReplyToEmail: s.emailReplyToEmail,
@@ -119,6 +123,8 @@ function AdminSettings() {
         routerMonthlyPrice: Number(formData.routerMonthlyPrice),
         trialDays: Number(formData.trialDays),
         serverEndpoint: formData.serverEndpoint,
+        proxyPortRangeStart: Number(formData.proxyPortRangeStart),
+        proxyPortRangeEnd: Number(formData.proxyPortRangeEnd),
         emailSenderName: formData.emailSenderName,
         emailSenderEmail: formData.emailSenderEmail,
         emailReplyToEmail: formData.emailReplyToEmail,
@@ -235,6 +241,25 @@ function AdminSettings() {
                 onChange={(e) => setFormData({ ...formData, serverEndpoint: e.target.value })}
                 className={inputClass}
               />
+            </Field>
+            <Field
+              label="Router Proxy Port Range"
+              hint="4-digit ports (1024-9999) reserved for per-router Winbox/SSH/API access, split into three equal thirds. Also needs updating in docker-compose.yml's ports: list to actually take effect, and existing routers keep their already-allocated ports until reprovisioned."
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number" min="1024" max="9999" step="1" placeholder="6100"
+                  value={formData.proxyPortRangeStart}
+                  onChange={(e) => setFormData({ ...formData, proxyPortRangeStart: e.target.value })}
+                  className={inputClass}
+                />
+                <input
+                  type="number" min="1024" max="9999" step="1" placeholder="7999"
+                  value={formData.proxyPortRangeEnd}
+                  onChange={(e) => setFormData({ ...formData, proxyPortRangeEnd: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
             </Field>
             <Field label="Email Sender Name">
               <input

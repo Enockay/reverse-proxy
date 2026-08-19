@@ -20,6 +20,18 @@ import {
   RefreshCw
 } from 'lucide-react'
 
+// Fallback host for Winbox/SSH/API display if the backend ever omits
+// router.address - derived from VITE_API_URL rather than a hardcoded domain,
+// since that differs per deployment (e.g. vpn.blackie-networks.com vs
+// vpn-test.blackie-networks.com).
+const FALLBACK_HOST = (() => {
+  try {
+    return new URL(import.meta.env.VITE_API_URL || 'http://localhost:5000').hostname
+  } catch {
+    return 'localhost'
+  }
+})()
+
 function RouterDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -187,7 +199,7 @@ function RouterDetails() {
   if (!router) return null
 
   const winboxUrl = router.ports?.winbox 
-    ? `winbox://${router.address || 'vpn.blackie-networks.com'}:${router.ports.winbox}`
+    ? `winbox://${router.address || FALLBACK_HOST}:${router.ports.winbox}`
     : null
 
   return (
@@ -348,12 +360,12 @@ function RouterDetails() {
                   <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">Winbox</div>
                     <div className="text-sm font-mono text-gray-900">
-                      {router.address || 'vpn.blackie-networks.com'}:{router.ports.winbox}
+                      {router.address || FALLBACK_HOST}:{router.ports.winbox}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => copyToClipboard(`${router.address || 'vpn.blackie-networks.com'}:${router.ports.winbox}`, 'winbox')}
+                      onClick={() => copyToClipboard(`${router.address || FALLBACK_HOST}:${router.ports.winbox}`, 'winbox')}
                       className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                       title="Copy Winbox address"
                     >
@@ -380,11 +392,11 @@ function RouterDetails() {
                   <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">SSH</div>
                     <div className="text-sm font-mono text-gray-900">
-                      {router.address || 'vpn.blackie-networks.com'}:{router.ports.ssh}
+                      {router.address || FALLBACK_HOST}:{router.ports.ssh}
                     </div>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(`${router.address || 'vpn.blackie-networks.com'}:${router.ports.ssh}`, 'ssh')}
+                    onClick={() => copyToClipboard(`${router.address || FALLBACK_HOST}:${router.ports.ssh}`, 'ssh')}
                     className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                     title="Copy SSH address"
                   >
@@ -401,11 +413,11 @@ function RouterDetails() {
                   <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">API</div>
                     <div className="text-sm font-mono text-gray-900">
-                      {router.address || 'vpn.blackie-networks.com'}:{router.ports.api}
+                      {router.address || FALLBACK_HOST}:{router.ports.api}
                     </div>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(`${router.address || 'vpn.blackie-networks.com'}:${router.ports.api}`, 'api')}
+                    onClick={() => copyToClipboard(`${router.address || FALLBACK_HOST}:${router.ports.api}`, 'api')}
                     className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                     title="Copy API address"
                   >
