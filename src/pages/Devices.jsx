@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import api from '../services/api'
 import {
   Laptop,
@@ -44,6 +45,229 @@ function CopyableIp({ value }) {
       {ip}
       {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3 text-gray-400" />}
     </button>
+  )
+}
+
+// Default RouterOS service ports - these are the router's own real listening
+// ports, reachable directly over the tunnel by its VPN IP once connected, and
+// are unrelated to the public TCP-proxy ports used for external (non-VPN)
+// access (those only make sense against the public host, not the tunnel IP).
+const MIKROTIK_PORTS = { winbox: 8291, ssh: 22, api: 8728, web: 80 }
+
+function CopyButton({ text, label }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async (e) => {
+    e.stopPropagation()
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <button onClick={copy} className="inline-flex items-center gap-1 text-gray-400 hover:text-blue-600 transition-colors shrink-0" title={`Copy ${label}`}>
+      {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+    </button>
+  )
+}
+
+// host and port are always passed separately (not "host:port") so every
+// snippet/command can be built correctly regardless of whether the port is
+// the RouterOS default (internal/VPN access) or a non-standard proxied one
+// (public access) - SSH in particular needs `-p <port>` for anything but 22.
+function apiSnippet(lang, host, port) {
+  if (lang === 'node') {
+    return `const { RouterOSAPI } = require('node-routeros');
+
+const conn = new RouterOSAPI({
+  host: '${host}',
+  port: ${port},
+  user: 'admin',
+  password: 'your-password'
+});
+
+conn.connect().then(async () => {
+  const resources = await conn.write('/system/resource/print');
+  console.log(resources);
+  conn.close();
+});`
+  }
+  if (lang === 'python') {
+    return `from librouteros import connect
+
+api = connect(
+    host='${host}',
+    port=${port},
+    username='admin',
+    password='your-password'
+)
+
+for row in api('/system/resource/print'):
+    print(row)`
+  }
+  return `<?php
+require_once 'routeros_api.class.php';
+
+$API = new RouterosAPI();
+if ($API->connect('${host}', 'admin', 'your-password', ${port})) {
+    $result = $API->comm('/system/resource/print');
+    print_r($result);
+    $API->disconnect();
+}`
+}
+
+function sshCommand(host, port) {
+  return port === 22 ? `ssh admin@${host}` : `ssh -p ${port} admin@${host}`
+}
+
+const API_LANGS = [
+  { value: 'node', label: 'Node.js' },
+  { value: 'python', label: 'Python' },
+  { value: 'php', label: 'PHP' }
+]
+
+// publicUrl.* values from the API are already "host:port" strings
+// (e.g. "vpn-test.blackie-networks.com:6100") - split them back apart since
+// every snippet/command needs host and port separately.
+function splitHostPort(hostPort, fallbackPort) {
+  if (!hostPort) return null
+  const idx = hostPort.lastIndexOf(':')
+  if (idx === -1) return { host: hostPort, port: fallbackPort }
+  const port = parseInt(hostPort.slice(idx + 1), 10)
+  return { host: hostPort.slice(0, idx), port: Number.isFinite(port) ? port : fallbackPort }
+}
+
+function RouterConnectPanel({ ip, clientName, publicUrl }) {
+  const [mode, setMode] = useState('internal') // 'internal' | 'public'
+  const [tab, setTab] = useState('winbox')
+  const [apiLang, setApiLang] = useState('node')
+  const [pingState, setPingState] = useState(null) // null | 'loading' | 'success' | 'error'
+
+  const hasPublic = !!(publicUrl?.winbox || publicUrl?.ssh || publicUrl?.api)
+
+  // Web has no public proxy port (only winbox/ssh/api get one) so it's
+  // internal-only - drop it from the tab list once in public mode.
+  const tabs = mode === 'public' ? ['winbox', 'ssh', 'api'] : ['winbox', 'ssh', 'api', 'web']
+
+  const target = {
+    winbox: mode === 'internal' ? { host: ip, port: MIKROTIK_PORTS.winbox } : splitHostPort(publicUrl?.winbox, MIKROTIK_PORTS.winbox),
+    ssh: mode === 'internal' ? { host: ip, port: MIKROTIK_PORTS.ssh } : splitHostPort(publicUrl?.ssh, MIKROTIK_PORTS.ssh),
+    api: mode === 'internal' ? { host: ip, port: MIKROTIK_PORTS.api } : splitHostPort(publicUrl?.api, MIKROTIK_PORTS.api),
+    web: { host: ip, port: MIKROTIK_PORTS.web }
+  }[tab]
+
+  const testConnection = async () => {
+    if (!clientName) return
+    setPingState('loading')
+    try {
+      const res = await api.post(`/api/clients/${clientName}/ping`, { target: ip })
+      setPingState(res.data?.success ? 'success' : 'error')
+    } catch (e) {
+      setPingState('error')
+    }
+  }
+
+  return (
+    <div className="mt-2 pt-2 border-t border-gray-200">
+      {hasPublic && (
+        <div className="flex gap-1 mb-1.5">
+          {[
+            { value: 'internal', label: 'Via this device (VPN)' },
+            { value: 'public', label: 'Via public internet' }
+          ].map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setMode(value)}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium ${mode === value ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex gap-1">
+          {tabs.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${tab === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {t === 'api' ? 'API' : t === 'ssh' ? 'SSH' : t}
+            </button>
+          ))}
+        </div>
+        {mode === 'internal' && clientName && (
+          <button
+            onClick={testConnection}
+            disabled={pingState === 'loading'}
+            className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1"
+          >
+            {pingState === 'loading' && <Loader className="w-3 h-3 animate-spin" />}
+            {pingState === 'success' && <Wifi className="w-3 h-3 text-green-600" />}
+            {pingState === 'error' && <WifiOff className="w-3 h-3 text-red-500" />}
+            {pingState === null && 'Test connection'}
+            {pingState === 'success' && 'Reachable'}
+            {pingState === 'error' && 'Unreachable'}
+            {pingState === 'loading' && 'Pinging...'}
+          </button>
+        )}
+      </div>
+
+      {!target ? (
+        <p className="text-xs text-gray-400 italic">Not available yet.</p>
+      ) : (
+        <>
+          {tab === 'winbox' && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Open Winbox and connect to this address directly:</p>
+              <div className="flex items-center justify-between px-2 py-1.5 bg-gray-100 rounded font-mono text-xs text-gray-700">
+                {target.host}:{target.port}
+                <CopyButton text={`${target.host}:${target.port}`} label="Winbox address" />
+              </div>
+            </div>
+          )}
+
+          {tab === 'ssh' && (
+            <div className="flex items-center justify-between px-2 py-1.5 bg-gray-100 rounded font-mono text-xs text-gray-700">
+              {sshCommand(target.host, target.port)}
+              <CopyButton text={sshCommand(target.host, target.port)} label="SSH command" />
+            </div>
+          )}
+
+          {tab === 'web' && (
+            <div className="flex items-center justify-between px-2 py-1.5 bg-gray-100 rounded text-xs">
+              <a href={`http://${target.host}`} target="_blank" rel="noreferrer" className="font-mono text-blue-600 hover:underline flex items-center gap-1">
+                http://{target.host}<ExternalLink className="w-2.5 h-2.5" />
+              </a>
+              <CopyButton text={`http://${target.host}`} label="Web address" />
+            </div>
+          )}
+
+          {tab === 'api' && (
+            <div>
+              <div className="flex gap-1 mb-1">
+                {API_LANGS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setApiLang(value)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${apiLang === value ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <pre className="px-2 py-2 bg-gray-900 text-gray-100 rounded text-[10px] leading-relaxed overflow-x-auto whitespace-pre">{apiSnippet(apiLang, target.host, target.port)}</pre>
+                <div className="absolute top-1.5 right-1.5">
+                  <CopyButton text={apiSnippet(apiLang, target.host, target.port)} label="API code" />
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Connects on port {target.port} - replace the username/password with this router&apos;s own admin credentials.</p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }
 
@@ -122,6 +346,18 @@ function AddDeviceModal({ onClose, onCreated }) {
 
 function SetupPanel({ device, otherPeers, onClose }) {
   const [copied, setCopied] = useState(false)
+  const [qrConfig, setQrConfig] = useState(null)
+  const [qrError, setQrError] = useState(false)
+  const isPhone = device.deviceType === 'phone'
+
+  useEffect(() => {
+    if (!isPhone) return
+    let cancelled = false
+    api.get(`/api/devices/${device.id}/config`, { responseType: 'text' })
+      .then((response) => { if (!cancelled) setQrConfig(response.data) })
+      .catch(() => { if (!cancelled) setQrError(true) })
+    return () => { cancelled = true }
+  }, [device.id, isPhone])
 
   const handleDownload = async () => {
     try {
@@ -165,11 +401,35 @@ function SetupPanel({ device, otherPeers, onClose }) {
 
         <div className="space-y-3 mb-5">
           <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Connect this device</h3>
-          <ol className="space-y-2 text-xs text-gray-600 list-decimal list-inside">
-            <li>Install the official WireGuard app for this device from <a href="https://www.wireguard.com/install/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline inline-flex items-center">wireguard.com/install<ExternalLink className="w-2.5 h-2.5 ml-0.5" /></a></li>
-            <li>Download the config below, then in the WireGuard app choose <span className="font-medium text-gray-800">Import tunnel(s) from file</span> and select it.</li>
-            <li>Activate the tunnel. Once connected, this device holds the address <span className="font-mono">{device.vpnIp?.split('/')[0]}</span> on the private network.</li>
-          </ol>
+
+          {isPhone ? (
+            <>
+              <ol className="space-y-2 text-xs text-gray-600 list-decimal list-inside">
+                <li>Install the official WireGuard app from the <a href="https://apps.apple.com/app/wireguard/id1441195209" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">App Store</a> or <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Play Store</a>.</li>
+                <li>In the app, tap <span className="font-medium text-gray-800">+ &rarr; Scan from QR code</span> and point your phone&apos;s camera at the code below.</li>
+                <li>Activate the tunnel. Once connected, this device holds the address <span className="font-mono">{device.vpnIp?.split('/')[0]}</span> on the private network.</li>
+              </ol>
+              <div className="flex justify-center py-3 bg-gray-50 rounded">
+                {qrConfig ? (
+                  <QRCodeSVG value={qrConfig} size={176} />
+                ) : qrError ? (
+                  <p className="text-xs text-red-500 py-8">Failed to load QR code.</p>
+                ) : (
+                  <div className="flex items-center justify-center h-[176px] w-[176px]">
+                    <Loader className="w-5 h-5 animate-spin text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 text-center">No camera handy? You can also download or copy the config file below.</p>
+            </>
+          ) : (
+            <ol className="space-y-2 text-xs text-gray-600 list-decimal list-inside">
+              <li>Install the official WireGuard app for this device from <a href="https://www.wireguard.com/install/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline inline-flex items-center">wireguard.com/install<ExternalLink className="w-2.5 h-2.5 ml-0.5" /></a></li>
+              <li>Download the config below, then in the WireGuard app choose <span className="font-medium text-gray-800">Import tunnel(s) from file</span> and select it.</li>
+              <li>Activate the tunnel. Once connected, this device holds the address <span className="font-mono">{device.vpnIp?.split('/')[0]}</span> on the private network.</li>
+            </ol>
+          )}
+
           <div className="flex gap-2">
             <button onClick={handleDownload} className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
               <Download className="w-3.5 h-3.5 mr-1.5" />
@@ -193,18 +453,18 @@ function SetupPanel({ device, otherPeers, onClose }) {
             </p>
             <div className="space-y-1.5">
               {otherPeers.map((p) => (
-                <div key={p.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded text-xs">
-                  <span className="text-gray-700 flex items-center">
-                    {p.kind === 'router' ? <Router className="w-3.5 h-3.5 mr-1.5 text-gray-400" /> : <Laptop className="w-3.5 h-3.5 mr-1.5 text-gray-400" />}
-                    {p.name}
-                  </span>
-                  <CopyableIp value={p.vpnIp} />
+                <div key={p.id} className="px-3 py-2 bg-gray-50 rounded text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-700 flex items-center">
+                      {p.kind === 'router' ? <Router className="w-3.5 h-3.5 mr-1.5 text-gray-400" /> : <Laptop className="w-3.5 h-3.5 mr-1.5 text-gray-400" />}
+                      {p.name}
+                    </span>
+                    <CopyableIp value={p.vpnIp} />
+                  </div>
+                  {p.kind === 'router' && p.vpnIp && <RouterConnectPanel ip={p.vpnIp?.split('/')[0]} clientName={p.clientName} publicUrl={p.publicUrl} />}
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-2">
-              For example, to reach a MikroTik router at 10.0.0.6, open Winbox or SSH to that address directly from this device.
-            </p>
           </div>
         )}
       </div>
@@ -253,7 +513,7 @@ function Devices() {
     const otherDevices = devices
       .filter(d => d.id !== device.id)
       .map(d => ({ id: d.id, name: d.name, vpnIp: d.vpnIp, kind: 'device' }))
-    const routerPeers = routers.map(r => ({ id: r.id, name: r.name, vpnIp: r.wireguardConfig?.ip || r.address, kind: 'router' }))
+    const routerPeers = routers.map(r => ({ id: r.id, name: r.name, vpnIp: r.vpnIp, kind: 'router', clientName: r.wireguardConfig?.clientName, publicUrl: r.publicUrl }))
     return [...routerPeers, ...otherDevices]
   }
 
