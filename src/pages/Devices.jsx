@@ -10,6 +10,7 @@ import {
   X,
   Loader,
   Download,
+  Upload,
   Copy,
   Check,
   Trash2,
@@ -18,7 +19,8 @@ import {
   Network,
   Router,
   ExternalLink,
-  Info
+  Info,
+  Clock
 } from 'lucide-react'
 
 const DEVICE_TYPES = [
@@ -30,6 +32,64 @@ const DEVICE_TYPES = [
 
 function deviceIcon(type) {
   return DEVICE_TYPES.find(t => t.value === type)?.icon || HardDrive
+}
+
+function formatBytes(value) {
+  const bytes = Number(value)
+  if (!value || !Number.isFinite(bytes)) return 'N/A'
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+  return `${(bytes / 1024 ** exponent).toFixed(exponent === 0 ? 0 : 2)} ${units[exponent]}`
+}
+
+function timeAgo(date) {
+  if (!date) return 'Never'
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+  if (seconds < 0) return 'Just now'
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+// One-paste setup scripts: write the config to disk, bring the tunnel up,
+// and print its status, so the user only has to paste once instead of
+// downloading a file and separately running commands.
+function safeTunnelName(name) {
+  return (name || 'wg-device').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32)
+}
+
+function macSetupScript(configText, deviceName) {
+  const tunnel = safeTunnelName(deviceName)
+  return `cat > ~/${tunnel}.conf << 'EOF'
+${configText}
+EOF
+command -v wg-quick >/dev/null 2>&1 || brew install wireguard-tools
+sudo wg-quick up ~/${tunnel}.conf
+echo "--- Tunnel status ---"
+sudo wg show ${tunnel}`
+}
+
+function windowsSetupScript(configText, deviceName) {
+  const tunnel = safeTunnelName(deviceName)
+  return `$configPath = "$env:USERPROFILE\\${tunnel}.conf"
+@'
+${configText}
+'@ | Out-File -FilePath $configPath -Encoding ascii -Force
+
+& "C:\\Program Files\\WireGuard\\wireguard.exe" /installtunnelservice $configPath
+Start-Sleep -Seconds 2
+Write-Host "--- Tunnel status ---"
+Get-Service "WireGuardTunnel\`$${tunnel}" | Select-Object Name, Status | Format-Table -AutoSize`
+}
+
+function detectPlatform() {
+  const ua = navigator.userAgent || ''
+  return /Win/i.test(ua) ? 'windows' : 'mac'
 }
 
 function CopyableIp({ value }) {
@@ -348,6 +408,7 @@ function SetupPanel({ device, otherPeers, onClose }) {
   const [copied, setCopied] = useState(false)
   const [qrConfig, setQrConfig] = useState(null)
   const [qrError, setQrError] = useState(false)
+  const [platform, setPlatform] = useState(detectPlatform)
   const isPhone = device.deviceType === 'phone'
 
   useEffect(() => {
@@ -378,7 +439,12 @@ function SetupPanel({ device, otherPeers, onClose }) {
   const handleCopy = async () => {
     try {
       const response = await api.get(`/api/devices/${device.id}/config`, { responseType: 'text' })
-      await navigator.clipboard.writeText(response.data)
+      const textToCopy = isPhone
+        ? response.data
+        : platform === 'windows'
+          ? windowsSetupScript(response.data, device.name)
+          : macSetupScript(response.data, device.name)
+      await navigator.clipboard.writeText(textToCopy)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
@@ -430,16 +496,41 @@ function SetupPanel({ device, otherPeers, onClose }) {
             </ol>
           )}
 
+          {!isPhone && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Your computer&apos;s OS (so the copied script matches it):</p>
+              <div className="flex gap-1">
+                {[
+                  { value: 'mac', label: 'macOS' },
+                  { value: 'windows', label: 'Windows' }
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setPlatform(value)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium ${platform === value ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button onClick={handleDownload} className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Download Config
             </button>
-            <button onClick={handleCopy} className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
+            <button onClick={handleCopy} className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200" title={isPhone ? 'Copy raw config' : `Copy a ${platform === 'windows' ? 'PowerShell' : 'terminal'} script that sets up and starts the tunnel automatically`}>
               {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-              {copied ? 'Copied' : 'Copy Config'}
+              {copied ? 'Copied' : isPhone ? 'Copy Config' : 'Copy Setup Script'}
             </button>
           </div>
+          {!isPhone && (
+            <p className="text-xs text-gray-400">
+              Paste the script into {platform === 'windows' ? 'PowerShell (as Administrator)' : 'Terminal'} - it saves the config, starts the tunnel, and prints its status.
+            </p>
+          )}
         </div>
 
         {otherPeers.length > 0 && (
@@ -570,6 +661,8 @@ function Devices() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tunnel Address</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Connected</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Traffic</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -596,6 +689,24 @@ function Devices() {
                             <WifiOff className="w-3 h-3 mr-1" />Not connected
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className="inline-flex items-center text-xs text-gray-500">
+                          <Clock className="w-3 h-3 mr-1 text-gray-400" />
+                          {timeAgo(d.lastHandshake)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span className="inline-flex items-center" title="Received">
+                            <Download className="w-3 h-3 mr-0.5 text-gray-400" />
+                            {formatBytes(d.transferRx)}
+                          </span>
+                          <span className="inline-flex items-center" title="Sent">
+                            <Upload className="w-3 h-3 mr-0.5 text-gray-400" />
+                            {formatBytes(d.transferTx)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-600">{new Date(d.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">
