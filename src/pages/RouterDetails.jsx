@@ -53,6 +53,8 @@ function RouterDetails() {
   const [pinging, setPinging] = useState(false)
   const [pingResult, setPingResult] = useState(null)
   const [renewing, setRenewing] = useState(false)
+  const [refreshingInfo, setRefreshingInfo] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState('')
 
   useEffect(() => {
     fetchRouterDetails()
@@ -79,6 +81,20 @@ function RouterDetails() {
       setTimeout(() => setCopiedItem(null), 2000)
     } catch (error) {
       console.error('Failed to copy:', error)
+    }
+  }
+
+  const handleRefreshInfo = async () => {
+    setRefreshingInfo(true)
+    setRefreshMessage('')
+    try {
+      const response = await api.post(`/api/routers/${id}/refresh-info`)
+      setRouter(prev => ({ ...prev, routerboardInfo: response.data.routerboardInfo }))
+      setRefreshMessage('Routerboard info updated')
+    } catch (err) {
+      setRefreshMessage(err.response?.data?.error || 'Failed to fetch routerboard info')
+    } finally {
+      setRefreshingInfo(false)
     }
   }
 
@@ -444,15 +460,31 @@ function RouterDetails() {
           </div>
 
 
-          {/* Routerboard Information Card */}
-          {router.routerboardInfo && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center mb-4">
+          {/* Routerboard Information Card - always shown (not just when data
+              already exists) so there's somewhere to trigger a first fetch. */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
                 <div className="p-2 bg-green-100 rounded-lg mr-3">
                   <Activity className="w-5 h-5 text-green-600" />
                 </div>
                 <h2 className="text-sm font-semibold text-gray-900">Routerboard Information</h2>
               </div>
+              <button
+                onClick={handleRefreshInfo}
+                disabled={refreshingInfo}
+                className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {refreshingInfo ? <Loader className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+                Refresh
+              </button>
+            </div>
+            {refreshMessage && (
+              <p className="text-xs text-gray-500 mb-3">{refreshMessage}</p>
+            )}
+            {!router.routerboardInfo ? (
+              <p className="text-sm text-gray-400">No routerboard data yet - click Refresh to check now, or wait for the router to check in automatically.</p>
+            ) : (
               <div className="space-y-3">
                 {router.routerboardInfo.uptime && (
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -527,8 +559,8 @@ function RouterDetails() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Router Actions Card */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

@@ -32,6 +32,23 @@ function AddRouter() {
   }, [])
 
   const fetchBillingInfo = async () => {
+    // Router price/trial length are admin-configurable (Settings.routerMonthlyPrice/
+    // trialDays) - fetched separately since /api/billing/summary doesn't include
+    // them, and defaulted here only as a last resort if the request fails, not
+    // hardcoded into the displayed copy itself.
+    let pricing = { routerMonthlyPrice: null, trialDays: null }
+    try {
+      const pricingResponse = await api.get('/api/settings/pricing')
+      if (pricingResponse.data.success) {
+        pricing = {
+          routerMonthlyPrice: pricingResponse.data.routerMonthlyPrice,
+          trialDays: pricingResponse.data.trialDays
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch pricing settings:', error)
+    }
+
     try {
       const response = await api.get('/api/billing/summary')
       if (response.data.success) {
@@ -39,16 +56,17 @@ function AddRouter() {
         const summary = response.data.summary || response.data.billing
         setBillingInfo({
           ...summary,
+          ...pricing,
           balance: summary.userBalance || summary.balance || 0,
-          isFirstRouter: summary.isFirstRouter !== undefined 
-            ? summary.isFirstRouter 
+          isFirstRouter: summary.isFirstRouter !== undefined
+            ? summary.isFirstRouter
             : (summary.totalRouters === 0 || summary.totalRouters === undefined)
         })
       }
     } catch (error) {
       console.error('Failed to fetch billing info:', error)
       // On error, assume first router to allow creation (better UX)
-      setBillingInfo({ balance: 0, isFirstRouter: true, totalRouters: 0 })
+      setBillingInfo({ balance: 0, isFirstRouter: true, totalRouters: 0, ...pricing })
     } finally {
       setLoadingBilling(false)
     }
@@ -140,15 +158,15 @@ function AddRouter() {
               <div className="space-y-1 text-xs text-gray-700">
                 {isFirstRouter ? (
                   <div>
-                    <p className="mb-2">Your first router is <strong>free for 7 days</strong>! After the trial expires, you'll be charged $1/month per router.</p>
+                    <p className="mb-2">Your first router is <strong>free for {billingInfo.trialDays ?? 7} days</strong>! After the trial expires, you&apos;ll be charged ${(billingInfo.routerMonthlyPrice ?? 1).toFixed(2)}/month per router.</p>
                     <div className="bg-white rounded p-2 border border-green-300">
                       <div className="flex items-center justify-between mb-1">
                         <span>Trial Period:</span>
-                        <span className="font-semibold">7 days</span>
+                        <span className="font-semibold">{billingInfo.trialDays ?? 7} days</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span>After Trial:</span>
-                        <span className="font-semibold">$1.00/month</span>
+                        <span className="font-semibold">${(billingInfo.routerMonthlyPrice ?? 1).toFixed(2)}/month</span>
                       </div>
                     </div>
                   </div>
@@ -163,7 +181,7 @@ function AddRouter() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Router Cost:</span>
-                      <span className="font-semibold">$1.00/month</span>
+                      <span className="font-semibold">${(billingInfo.routerMonthlyPrice ?? 1).toFixed(2)}/month</span>
                     </div>
                     {!hasBalance && (
                       <p className="text-red-600 font-medium mt-2">
