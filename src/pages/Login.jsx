@@ -19,12 +19,29 @@ function Login() {
     email: '',
     password: ''
   })
+  const VERIFICATION_ERROR_MESSAGES = {
+    missing_token: 'That verification link is missing its token. Please use the link from your email.',
+    invalid_token: 'That verification link is invalid or has expired. Please request a new one after logging in.',
+    server_error: 'Something went wrong verifying your email. Please try the link again.'
+  }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const { login, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isAdminLogin = useIsAdminLogin(location)
+  // Set when the backend redirects here after an email-verification link
+  // click (routes/auth.js's GET /api/auth/verify-email) - the visitor isn't
+  // necessarily authenticated in this browser context (the link is typically
+  // opened from an email client, which may be a different session than the
+  // one that signed up), so this can't rely on the /verify-email page's own
+  // auth-gated polling view.
+  const searchParams = new URLSearchParams(location.search)
+  const justVerified = searchParams.get('verified') === '1'
+  const verificationError = searchParams.get('verification_error')
+  const verificationErrorMessage = verificationError
+    ? (VERIFICATION_ERROR_MESSAGES[verificationError] || 'We couldn\'t verify your email. Please try the link again.')
+    : ''
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -143,10 +160,17 @@ function Login() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
+              {justVerified && !error && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-700 text-sm">
+                  <span className="mr-2">✅</span>
+                  <span>Email verified successfully! You can now log in.</span>
+                </div>
+              )}
+
+              {(error || verificationErrorMessage) && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm">
                   <span className="mr-2">⚠️</span>
-                  <span>{error}</span>
+                  <span>{error || verificationErrorMessage}</span>
                 </div>
               )}
 
@@ -305,10 +329,17 @@ function Login() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
+              {justVerified && !error && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-700 text-sm">
+                  <span className="mr-2">✅</span>
+                  <span>Email verified successfully! You can now log in.</span>
+                </div>
+              )}
+
+              {(error || verificationErrorMessage) && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm">
                   <span className="mr-2">⚠️</span>
-                  <span>{error}</span>
+                  <span>{error || verificationErrorMessage}</span>
                 </div>
               )}
 
