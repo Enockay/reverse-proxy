@@ -11,7 +11,9 @@ import {
   CheckCircle,
   Database,
   Wifi,
-  Clock
+  Clock,
+  Copy,
+  Check
 } from 'lucide-react'
 
 const EMPTY_FORM = {
@@ -53,6 +55,26 @@ function Field({ label, hint, children }) {
       <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
       {children}
       {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
+    </div>
+  )
+}
+
+function CopyableUrl({ label, url }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded text-xs font-mono text-gray-600">
+        <span className="truncate mr-2">{url}</span>
+        <button type="button" onClick={copy} className="shrink-0 text-gray-400 hover:text-blue-600" title={`Copy ${label}`}>
+          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      </div>
     </div>
   )
 }
@@ -352,6 +374,11 @@ function AdminSettings() {
                 className={inputClass}
               />
             </Field>
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Paste these into your PayStack dashboard</p>
+              <CopyableUrl label="Callback URL" url={`${window.location.origin}/billing/callback`} />
+              <CopyableUrl label="Webhook URL" url={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/billing/paystack/webhook`} />
+            </div>
           </SectionCard>
         </div>
 

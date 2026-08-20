@@ -4,6 +4,7 @@ import {
   Zap,
   Globe,
   Lock,
+  Router,
   Server,
   CheckCircle,
   ArrowRight,
@@ -214,33 +215,42 @@ function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16 sm:h-20">
               <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-5 h-5 text-white" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-600/30 ring-1 ring-white/20">
+                  <Router className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-                  Blackie Networks
-                </span>
+                <div className="min-w-0 leading-tight">
+                  <span className="block text-base sm:text-lg font-bold text-gray-900 truncate">
+                    MikroTik Remote Access
+                  </span>
+                  <span className="block text-[10px] sm:text-xs text-gray-500 truncate">
+                    Access your hub from everywhere
+                  </span>
+                </div>
               </div>
-              <div className="hidden md:flex items-center space-x-8">
-                <a href="#hub" className="text-base text-gray-700 hover:text-blue-600 transition-colors">Private Hub</a>
-                <a href="#features" className="text-base text-gray-700 hover:text-blue-600 transition-colors">Features</a>
-                <a href="#pricing" className="text-base text-gray-700 hover:text-blue-600 transition-colors">Pricing</a>
-                <a href="#how-it-works" className="text-base text-gray-700 hover:text-blue-600 transition-colors">How It Works</a>
-                <Link
-                  to={user ? "/dashboard" : "/login"}
-                  className="text-base text-gray-700 hover:text-blue-600 transition-colors"
-                >
-                  {user ? "Dashboard" : "Login"}
-                </Link>
-                {!user && (
+              <div className="hidden md:flex items-center">
+                <div className="flex items-center space-x-8">
+                  <a href="#hub" className="text-base text-gray-700 hover:text-blue-600 transition-colors">Private Hub</a>
+                  <a href="#features" className="text-base text-gray-700 hover:text-blue-600 transition-colors">Features</a>
+                  <a href="#pricing" className="text-base text-gray-700 hover:text-blue-600 transition-colors">Pricing</a>
+                  <a href="#how-it-works" className="text-base text-gray-700 hover:text-blue-600 transition-colors">How It Works</a>
+                </div>
+                <div className="flex items-center space-x-3 ml-8 pl-8 border-l border-gray-200">
                   <Link
-                    to="/signup"
-                    className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all flex items-center space-x-1.5 text-base font-semibold"
+                    to={user ? "/dashboard" : "/login"}
+                    className="text-base font-medium text-gray-700 px-4 py-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-colors"
                   >
-                    <span>Get Started</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {user ? "Dashboard" : "Login"}
                   </Link>
-                )}
+                  {!user && (
+                    <Link
+                      to="/signup"
+                      className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-600/30 hover:-translate-y-0.5 transition-all flex items-center space-x-1.5 text-base font-semibold"
+                    >
+                      <span>Get Started</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 md:hidden">
                 <Link
@@ -268,23 +278,25 @@ function Home() {
                 <a href="#features" onClick={() => setMobileMenuOpen(false)} className="px-2 py-2.5 text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">Features</a>
                 <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="px-2 py-2.5 text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">Pricing</a>
                 <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="px-2 py-2.5 text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">How It Works</a>
-                <Link
-                  to={user ? "/dashboard" : "/login"}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-2 py-2.5 text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  {user ? "Dashboard" : "Login"}
-                </Link>
-                {!user && (
+                <div className="mt-2 pt-2 border-t border-gray-200 flex flex-col space-y-2">
                   <Link
-                    to="/signup"
+                    to={user ? "/dashboard" : "/login"}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="mt-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center space-x-1.5"
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
                   >
-                    <span>Get Started</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    {user ? "Dashboard" : "Login"}
                   </Link>
-                )}
+                  {!user && (
+                    <Link
+                      to="/signup"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center space-x-1.5"
+                    >
+                      <span>Get Started</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -362,15 +374,22 @@ function Home() {
 
             {/* Dashboard mockup */}
             <div className="relative">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/5">
+              {/* Rounded as a standalone card on mobile/tablet, where it
+                  stacks below the text (no adjacent column to blend into).
+                  On large screens the left edge goes square and fades into
+                  the text column instead, so it reads as one continuous
+                  canvas rather than a floating card. Shadow stays soft
+                  throughout - a heavy drop shadow fights the blended look. */}
+              <div className="relative rounded-2xl lg:rounded-l-none lg:rounded-r-2xl overflow-hidden shadow-xl shadow-gray-900/10">
                 <img
-                  src="/dashboard-mockup.png"
-                  alt="Blackie Networks dashboard showing router status, global distribution map, and recent routers"
+                  src="/herosection.jpg"
+                  alt="Network administrator monitoring MikroTik routers across multiple locations on the Blackie Networks dashboard"
                   className="w-full h-auto block"
                   loading="eager"
-                  width="543"
-                  height="437"
+                  width="1400"
+                  height="933"
                 />
+                <div className="hidden lg:block absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-white via-white/70 to-transparent pointer-events-none" />
               </div>
             </div>
           </div>
