@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import {
   LayoutDashboard,
   Router,
+  Laptop,
   Users,
   LifeBuoy,
   Receipt,
@@ -23,6 +24,7 @@ import { useState } from 'react'
 const adminNavigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, exact: true },
   { name: 'Routers', href: '/admin/routers', icon: Router },
+  { name: 'Devices', href: '/admin/devices', icon: Laptop },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Income', href: '/admin/income', icon: Wallet },
   { name: 'Transactions', href: '/admin/transactions', icon: Receipt },

@@ -21,6 +21,7 @@ import Support from './pages/Support'
 import SupportDetails from './pages/SupportDetails'
 import Documents from './pages/Documents'
 import AdminRouters from './pages/AdminRouters'
+import AdminDevices from './pages/AdminDevices'
 import AdminRouterDetails from './pages/AdminRouterDetails'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminIncome from './pages/AdminIncome'
@@ -171,6 +172,7 @@ function App() {
             <Route path="income" element={<AdminIncome />} />
             <Route path="routers" element={<AdminRouters />} />
             <Route path="routers/:id" element={<AdminRouterDetails />} />
+            <Route path="devices" element={<AdminDevices />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="users/:id" element={<AdminUserDetails />} />
             <Route path="support" element={<AdminSupport />} />
