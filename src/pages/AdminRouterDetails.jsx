@@ -25,6 +25,8 @@ function AdminRouterDetails() {
   const [pingResult, setPingResult] = useState(null)
   const [reconnecting, setReconnecting] = useState(false)
   const [reconnectMessage, setReconnectMessage] = useState('')
+  const [refreshingInfo, setRefreshingInfo] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState('')
 
   useEffect(() => {
     fetchRouterDetails()
@@ -72,6 +74,20 @@ function AdminRouterDetails() {
       setReconnectMessage(err.response?.data?.error || 'Failed to restart proxy')
     } finally {
       setReconnecting(false)
+    }
+  }
+
+  const handleRefreshInfo = async () => {
+    setRefreshingInfo(true)
+    setRefreshMessage('')
+    try {
+      const response = await api.post(`/api/admin/routers/${id}/refresh-info`)
+      setRouter(prev => ({ ...prev, routerboardInfo: response.data.routerboardInfo }))
+      setRefreshMessage('Routerboard info updated')
+    } catch (err) {
+      setRefreshMessage(err.response?.data?.error || 'Failed to fetch routerboard info')
+    } finally {
+      setRefreshingInfo(false)
     }
   }
 
@@ -198,6 +214,20 @@ function AdminRouterDetails() {
             </div>
           ) : (
             <p className="text-xs text-gray-400">No routerboard data yet - router hasn&apos;t checked in</p>
+          )}
+
+          <div className="flex items-center gap-2 pt-2 mt-3 border-t border-gray-100">
+            <button
+              onClick={handleRefreshInfo}
+              disabled={refreshingInfo}
+              className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {refreshingInfo ? <Loader className="w-3 h-3 mr-1 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+              Refresh Info
+            </button>
+          </div>
+          {refreshMessage && (
+            <p className="mt-2 text-xs text-gray-600">{refreshMessage}</p>
           )}
         </div>
 
